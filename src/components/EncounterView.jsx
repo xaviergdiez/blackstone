@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { EXPANSIONS } from '../data/hostiles.js'
-import { damageOf, groupStats } from '../engine/encounter.js'
+import { damageOf, groupStats, startingLoadouts, loadoutProblems } from '../engine/encounter.js'
 import { inspirationResult } from '../engine/turn.js'
 import { attackOutcome } from '../engine/attack.js'
 import { getHostile, allHostiles } from '../store.js'
@@ -9,23 +9,18 @@ import { HostileCard } from './HostileCard.jsx'
 import { Sheet, Stepper, Refs, Icon, StatusBadge, D20, useRoller, ConfirmButton } from './ui.jsx'
 
 const QUICK = [
-  ['traitor-guardsmen', 6], ['negavolt-cultists', 4], ['ur-ghuls', 4], ['spindle-drones', 4],
-  ['chaos-beastmen', 4], ['rogue-psyker', 2], ['chaos-space-marines', 2], ['obsidius-mallex', 1],
+  'traitor-guardsmen', 'negavolt-cultists', 'ur-ghuls', 'spindle-drones',
+  'chaos-beastmen', 'rogue-psyker', 'chaos-space-marines', 'obsidius-mallex',
 ]
 
 export function EncounterView({ state, dispatch, settings, custom, onTranscribe }) {
   const { encounter } = state
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState(false) // false | true | hostile id to preselect
   const [activating, setActivating] = useState(null)
   const [inspiring, setInspiring] = useState(false)
   const groups = encounter.groups
   const commissarOnField = groups.some((g) => g.hostileId === 'traitor-commissar' && g.models.some((m) => !m.slain))
   const hasSpindles = groups.some((g) => getHostile(custom, g.hostileId, g.variant)?.usesThreat)
-
-  const quickAdd = (id, count) => {
-    const h = getHostile(custom, id)
-    dispatch({ type: 'addGroup', hostileId: id, count, label: h.name })
-  }
 
   const activeGroup = activating && groups.find((g) => g.id === activating)
 
@@ -53,11 +48,11 @@ export function EncounterView({ state, dispatch, settings, custom, onTranscribe 
       {groups.length === 0 ? (
         <div className="empty">
           <div className="h2">No hostiles on the battlefield</div>
-          <p style={{ margin: 0, maxWidth: '46ch' }}>Add the groups from the encounter cards you drew. Quick add uses the core box model counts.</p>
+          <p style={{ margin: 0, maxWidth: '46ch' }}>Add the groups from the encounter cards you drew. Pick a hostile, then set how many the card shows.</p>
           <div className="quick-add">
-            {QUICK.map(([id, n]) => {
+            {QUICK.map((id) => {
               const h = getHostile(custom, id)
-              return <button key={id} type="button" className="btn" onClick={() => quickAdd(id, n)}>{n} × {h.name}</button>
+              return <button key={id} type="button" className="btn" onClick={() => setAdding(id)}>{h.name}</button>
             })}
           </div>
           <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>Choose any hostile</button>
@@ -78,7 +73,7 @@ export function EncounterView({ state, dispatch, settings, custom, onTranscribe 
         </div>
       )}
 
-      {adding && <AddGroupSheet custom={custom} dispatch={dispatch} onClose={() => setAdding(false)} />}
+      {adding && <AddGroupSheet custom={custom} dispatch={dispatch} initialId={typeof adding === 'string' ? adding : null} onClose={() => setAdding(false)} />}
       {activeGroup && (
         <ActivationSheet
           group={activeGroup}
@@ -126,6 +121,11 @@ function GroupPanel({ group, hostile, commissarOnField, dispatch, onActivate, on
         )}
       </header>
       <div className="group-body">
+        {hostile.loadouts && loadoutProblems(group.models, hostile.loadouts).length > 0 && (
+          <p className="small" style={{ margin: 0, color: 'var(--ember)' }}>
+            Group make-up: {loadoutProblems(group.models, hostile.loadouts).join(' · ')}. Tap a model's loadout to change it. <Refs refs={hostile.loadouts.refs} />
+          </p>
+        )}
         <div className="models">
           {group.models.map((m) => (
             <ModelTile key={m.id} model={m} group={group} hostile={hostile} dispatch={dispatch} canMotivate={canMotivate} pending={pending} />
@@ -133,7 +133,7 @@ function GroupPanel({ group, hostile, commissarOnField, dispatch, onActivate, on
         </div>
         <div className="row-between">
           <div className="row">
-            <button type="button" className="btn btn-sm btn-ghost" onClick={() => dispatch({ type: 'addModel', groupId: group.id })}><Icon name="plus" /> Model</button>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => dispatch({ type: 'addModel', groupId: group.id, loadout: hostile.loadouts ? hostile.loadouts.default : null })}><Icon name="plus" /> Model</button>
             <StatusBadge hostile={hostile} />
           </div>
           <button type="button" className="btn btn-sm btn-ghost" onClick={() => dispatch({ type: 'removeGroup', groupId: group.id })} aria-label={`Remove ${hostile.name} group`}><Icon name="trash" /> Remove</button>
@@ -150,6 +150,11 @@ function ModelTile({ model, group, hostile, dispatch, canMotivate, pending }) {
   const attack = (result) => dispatch({ type: 'attack', groupId: group.id, modelId: model.id, result, cover: model.inCover, woundsValue: W, label })
   const heal = () => dispatch({ type: 'damage', groupId: group.id, modelId: model.id, kind: model.wounds > 0 ? 'wounds' : 'grievous', delta: -1, woundsValue: W })
   const toggle = (flag) => dispatch({ type: 'toggle', groupId: group.id, modelId: model.id, flag })
+  const cycleLoadout = () => {
+    const opts = hostile.loadouts.options
+    const next = opts[(opts.indexOf(model.loadout || hostile.loadouts.default) + 1) % opts.length]
+    dispatch({ type: 'set', groupId: group.id, modelId: model.id, patch: { loadout: next } })
+  }
   const pips = []
   for (let i = 0; i < Math.max(W, dmg); i++) pips.push(<span key={i} className={`pip ${i < dmg ? 'w' : ''}`} />)
   const hit = attackOutcome('success', { cover: model.inCover }).wounds
@@ -158,6 +163,11 @@ function ModelTile({ model, group, hostile, dispatch, canMotivate, pending }) {
     <div className={`model${model.slain ? ' slain' : ''}${model.stunned ? ' stunned' : ''}`}>
       <div className="model-top">
         <span className="model-label">#{model.label}</span>
+        {hostile.loadouts && (
+          <button type="button" className="mini loadout" onClick={cycleLoadout} title="Tap to change loadout" aria-label={`Loadout ${model.loadout || hostile.loadouts.default}, tap to change`}>
+            {model.loadout || hostile.loadouts.default}
+          </button>
+        )}
         <span className="mono small" title="wounds taken / Wounds value">{pending ? `${dmg}` : `${dmg}/${W}`}</span>
       </div>
       {!pending && <div className="pips" aria-label={`${dmg} of ${W} wounds`}>{pips}</div>}
@@ -177,12 +187,26 @@ function ModelTile({ model, group, hostile, dispatch, canMotivate, pending }) {
   )
 }
 
-function AddGroupSheet({ custom, dispatch, onClose }) {
+function countPresets(max) {
+  if (max <= 8) return Array.from({ length: max }, (_, i) => i + 1)
+  return [2, 3, 4, 5, 6, 7, 8, 10, 12, max].filter((n, i, a) => n <= max && a.indexOf(n) === i)
+}
+
+function defaultCount(h) {
+  if (h.defaultCount) return h.defaultCount
+  if (h.size === 'Huge') return 1
+  return Math.min(h.inBox || 4, h.size === 'Large' ? 2 : 4)
+}
+
+function AddGroupSheet({ custom, dispatch, onClose, initialId }) {
   const list = allHostiles(custom)
-  const [id, setId] = useState(list[0].id)
-  const [count, setCount] = useState(4)
+  const first = getHostile(custom, initialId || list[0].id)
+  const [id, setId] = useState(first.id)
+  const [count, setCount] = useState(defaultCount(first))
   const [variant, setVariant] = useState(null)
   const hostile = getHostile(custom, id, variant)
+  const max = hostile.inBox || 14
+  const lo = startingLoadouts(count, hostile.loadouts)
   const byExp = Object.keys(EXPANSIONS).map((k) => [k, list.filter((h) => h.expansion === k)]).filter(([, l]) => l.length)
   return (
     <Sheet title="Add hostile group" onClose={onClose} wide>
@@ -193,7 +217,7 @@ function AddGroupSheet({ custom, dispatch, onClose }) {
               <span className="eyebrow">{EXPANSIONS[k].label}</span>
               <div className="row">
                 {l.map((h) => (
-                  <button key={h.id} type="button" className="chip" aria-pressed={h.id === id} onClick={() => { setId(h.id); setVariant(null); setCount(h.defaultCount ? h.defaultCount : h.size === 'Huge' ? 1 : h.id === 'traitor-guardsmen' ? 6 : h.size === 'Large' ? 2 : 4) }}>
+                  <button key={h.id} type="button" className="chip" aria-pressed={h.id === id} onClick={() => { setId(h.id); setVariant(null); setCount(defaultCount(h)) }}>
                     {h.name}{h.status === 'pending' && !h.userMade ? ' ·' : ''}
                   </button>
                 ))}
@@ -201,9 +225,24 @@ function AddGroupSheet({ custom, dispatch, onClose }) {
             </div>
           ))}
           <hr className="divider" />
-          <div className="row-between">
-            <span className="field"><span>Models in group</span></span>
-            <Stepper value={count} onChange={setCount} min={1} max={14} label="models" />
+          <div className="stack" style={{ gap: 8 }}>
+            <div className="row-between">
+              <span className="field"><span>Models in group</span><span className="small muted" style={{ textTransform: 'none', letterSpacing: 0, fontFamily: 'var(--serif)' }}>As shown on the encounter card · {max} in the box</span></span>
+              <Stepper value={count} onChange={setCount} min={1} max={max} label="models" />
+            </div>
+            {max > 1 && (
+              <div className="row" role="group" aria-label="Group size presets">
+                {countPresets(max).map((n) => (
+                  <button key={n} type="button" className="chip" aria-pressed={n === count} onClick={() => setCount(n)} style={{ minWidth: 44, justifyContent: 'center' }}>{n}</button>
+                ))}
+              </div>
+            )}
+            {hostile.loadouts && (
+              <p className="small muted" style={{ margin: 0 }}>
+                Starts as {Object.entries(lo.reduce((a, l) => ({ ...a, [l]: (a[l] || 0) + 1 }), {})).map(([l, n]) => `${n} ${l}`).join(', ')}.
+                {count >= hostile.loadouts.requiredFrom ? ` ${hostile.loadouts.requiredFrom}+ models need the ${hostile.loadouts.unique.join(' and ')}.` : ' Change any loadout on the model tiles.'}
+              </p>
+            )}
           </div>
           {hostile.variants && (
             <div className="row">
@@ -212,7 +251,7 @@ function AddGroupSheet({ custom, dispatch, onClose }) {
               ))}
             </div>
           )}
-          <button type="button" className="btn btn-primary" onClick={() => { dispatch({ type: 'addGroup', hostileId: id, count, variant, label: hostile.name }); onClose() }}>
+          <button type="button" className="btn btn-primary" onClick={() => { dispatch({ type: 'addGroup', hostileId: id, count, variant, label: hostile.name, loadouts: hostile.loadouts }); onClose() }}>
             Add {count} × {hostile.name}
           </button>
         </div>

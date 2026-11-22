@@ -422,3 +422,6 @@ mark { background: rgba(164, 107, 214, 0.35); color: inherit; border-radius: 2px
 input.input { width: 100%; min-width: 0; }
 body { overflow-x: clip; }
 .mini:disabled { opacity: 0.35; cursor: not-allowed; }
+.mini.loadout { min-height: 28px; padding: 0 8px; margin-left: auto; margin-right: 6px; font-size: 11px; color: var(--gold); border-color: rgba(217, 180, 92, 0.45); }
+.model-actions { grid-template-columns: 1fr 1fr 30px 1fr; }
+.model-actions .mini { min-width: 0; padding: 0 2px; letter-spacing: 0.02em; overflow: hidden; }

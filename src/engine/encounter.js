@@ -30,13 +30,35 @@ export function newModel(label) {
   return { id: uid('m'), label, wounds: 0, grievous: 0, stunned: false, slain: false, motivated: false, empowered: false, inCover: false }
 }
 
-export function newGroup(hostileId, count, { name, variant } = {}) {
+// Starting loadouts: everyone gets the default, and a group large enough to need them
+// gets the unique loadouts (Sergeant, flamer) on its first models.
+export function startingLoadouts(count, config) {
+  if (!config) return Array(count).fill(null)
+  const out = Array(count).fill(config.default)
+  if (count >= config.requiredFrom) config.unique.forEach((l, i) => { if (i < count) out[i] = l })
+  return out
+}
+
+// Problems with a group's loadouts, counting standing and slain models alike.
+export function loadoutProblems(models, config) {
+  if (!config) return []
+  const problems = []
+  const count = (l) => models.filter((m) => m.loadout === l).length
+  for (const l of config.unique) {
+    if (count(l) > 1) problems.push(`More than one ${l}`)
+    if (models.length >= config.requiredFrom && count(l) === 0) problems.push(`${models.length} models: needs a ${l}`)
+  }
+  return problems
+}
+
+export function newGroup(hostileId, count, { name, variant, loadouts } = {}) {
+  const lo = startingLoadouts(count, loadouts)
   return {
     id: uid('g'),
     hostileId,
     variant: variant || null,
     name: name || null,
-    models: Array.from({ length: count }, (_, i) => newModel(`${i + 1}`)),
+    models: Array.from({ length: count }, (_, i) => ({ ...newModel(`${i + 1}`), loadout: lo[i] })),
   }
 }
 
@@ -67,7 +89,7 @@ export function encounterReducer(state, action) {
     case 'addModel':
       return {
         ...state,
-        groups: state.groups.map((g) => (g.id !== action.groupId ? g : { ...g, models: [...g.models, newModel(String(g.models.length + 1))] })),
+        groups: state.groups.map((g) => (g.id !== action.groupId ? g : { ...g, models: [...g.models, { ...newModel(String(g.models.length + 1)), loadout: action.loadout || null }] })),
       }
     case 'removeModel':
       return {

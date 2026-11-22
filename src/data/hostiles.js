@@ -32,6 +32,7 @@ const DIRE_REFS = [{ src: 'HRC' }, { src: 'DIRE', note: 'transcription used for 
 export const HOSTILES = [
   {
     id: 'traitor-guardsmen',
+    inBox: 14,
     name: 'Traitor Guardsmen',
     expansion: 'core',
     status: 'transcribed',
@@ -47,12 +48,21 @@ export const HOSTILES = [
     },
     unique: { Fury: FURY, Rush: RUSH },
     special: [
-      { name: 'Group make-up', text: 'A group of five or more Traitor Guardsmen must include the Sergeant and the flamer.', refs: [{ src: 'JA' }, { src: 'HRC' }] },
+      { name: 'Group make-up', text: 'Groups come in whatever size the encounter card says. A group of five or more Traitor Guardsmen must include the Sergeant and the flamer, and a group never has more than one of each.', refs: [{ src: 'HRC' }, { src: 'JA' }] },
     ],
+    // Per-model loadouts. Labels only: weapon numbers are on the card.
+    loadouts: {
+      options: ['Lasgun', 'Sergeant', 'Flamer'],
+      default: 'Lasgun',
+      unique: ['Sergeant', 'Flamer'],
+      requiredFrom: 5,
+      refs: [{ src: 'HRC' }, { src: 'JA' }],
+    },
     refs: DIRE_REFS,
   },
   {
     id: 'negavolt-cultists',
+    inBox: 4,
     name: 'Negavolt Cultists',
     expansion: 'core',
     status: 'transcribed',
@@ -74,6 +84,7 @@ export const HOSTILES = [
   },
   {
     id: 'ur-ghuls',
+    inBox: 4,
     name: 'Ur-Ghuls',
     expansion: 'core',
     status: 'transcribed',
@@ -97,6 +108,7 @@ export const HOSTILES = [
   },
   {
     id: 'spindle-drones',
+    inBox: 4,
     name: 'Spindle Drones',
     expansion: 'core',
     status: 'transcribed',
@@ -121,6 +133,7 @@ export const HOSTILES = [
   },
   {
     id: 'chaos-beastmen',
+    inBox: 4,
     name: 'Chaos Beastmen',
     expansion: 'core',
     status: 'transcribed',
@@ -141,6 +154,7 @@ export const HOSTILES = [
   },
   {
     id: 'rogue-psyker',
+    inBox: 2,
     name: 'Rogue Psyker',
     expansion: 'core',
     status: 'transcribed',
@@ -167,6 +181,7 @@ export const HOSTILES = [
   },
   {
     id: 'chaos-space-marines',
+    inBox: 2,
     name: 'Chaos Space Marines',
     expansion: 'core',
     status: 'transcribed',
@@ -189,6 +204,7 @@ export const HOSTILES = [
   },
   {
     id: 'obsidius-mallex',
+    inBox: 1,
     name: 'Obsidius Mallex',
     expansion: 'core',
     status: 'transcribed',
@@ -215,6 +231,7 @@ export const HOSTILES = [
   },
   {
     id: 'ambull',
+    inBox: 1,
     name: 'Ambull',
     expansion: 'ambull',
     status: 'transcribed',
@@ -259,6 +276,7 @@ export const HOSTILES = [
   },
   {
     id: 'traitor-commissar',
+    inBox: 1,
     name: 'Traitor Commissar',
     expansion: 'traitor',
     status: 'verified',
@@ -291,6 +309,7 @@ export const HOSTILES = [
   },
   {
     id: 'chaos-ogryn',
+    inBox: 1,
     name: 'Chaos Ogryn',
     expansion: 'traitor',
     status: 'verified',
@@ -322,6 +341,7 @@ export const HOSTILES = [
   // In scope, official, but the card itself is not transcribed yet.
   {
     id: 'borewyrm-infestation',
+    inBox: 2,
     name: 'Borewyrm Infestation',
     expansion: 'ambull',
     status: 'pending',
@@ -332,6 +352,7 @@ export const HOSTILES = [
   },
   {
     id: 'cultist-firebrand',
+    inBox: 1,
     name: 'Cultist Firebrand',
     expansion: 'escalation',
     status: 'pending',
@@ -340,6 +361,7 @@ export const HOSTILES = [
   },
   {
     id: 'cultists',
+    inBox: 7,
     name: 'Chaos Cultists',
     expansion: 'escalation',
     status: 'pending',
@@ -348,6 +370,7 @@ export const HOSTILES = [
   },
   {
     id: 'plague-marines',
+    inBox: 3,
     name: 'Plague Marines',
     expansion: 'noRespite',
     status: 'pending',
@@ -356,6 +379,7 @@ export const HOSTILES = [
   },
   {
     id: 'poxwalkers',
+    inBox: 6,
     name: 'Poxwalkers',
     expansion: 'noRespite',
     status: 'pending',

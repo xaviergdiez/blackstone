@@ -165,7 +165,7 @@ function Activate({ group, hostile, encounter, settings, dispatch, onClose }) {
         <div className="queue" role="list" aria-label="Activation order">
           {queue.map((m, i) => (
             <button key={m.id} type="button" role="listitem" aria-current={i === index ? 'step' : undefined} className={done[m.id] ? 'done' : ''} onClick={() => { setIndex(i); setResults([]) }}>
-              {m.label}
+              {m.label}{m.loadout && m.loadout !== hostile.loadouts?.default ? ` ${m.loadout}` : ''}
             </button>
           ))}
         </div>
@@ -187,7 +187,7 @@ function Activate({ group, hostile, encounter, settings, dispatch, onClose }) {
       ) : (
         <div className="grid-2">
           <div className="panel panel-pad">
-            <div className="h3" style={{ marginBottom: 4 }}>{hostile.name} {model.label} · situation</div>
+            <div className="h3" style={{ marginBottom: 4 }}>{hostile.name} {model.label}{model.loadout ? ` (${model.loadout})` : ''} · situation</div>
             <div className="question">
               <span className="q">Can it see an explorer?<small>Line of sight to at least one</small></span>
               <Seg options={YES_NO} value={situation.sees} onChange={(v) => set({ sees: v })} label="Sees an explorer" />

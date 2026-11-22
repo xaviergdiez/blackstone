@@ -6,7 +6,7 @@ import { EVENT_TABLES, REINFORCEMENTS } from '../data/tables.js'
 import { bandIndex, pickColumn, resolveBehaviour, modifiedRoll, validateHostile } from './behaviour.js'
 import { reinforcementResult, smallestSize } from './reinforce.js'
 import { destinyFromValues, rollDestiny, dealInitiative, inspirationResult, eventFor } from './turn.js'
-import { encounterReducer, initialEncounter, damageOf, migrateEncounter } from './encounter.js'
+import { encounterReducer, initialEncounter, damageOf, migrateEncounter, startingLoadouts, loadoutProblems } from './encounter.js'
 import { attackOutcome } from './attack.js'
 import { mulberry32 } from './dice.js'
 
@@ -181,6 +181,26 @@ check('old saves: grievous counters on hostiles become 2 wounds each', () => {
   assert.equal(m.wounds, 3)
   assert.equal(m.grievous, 0)
   assert.equal(m.inCover, false)
+})
+check('every hostile knows how many models are in its box', () => {
+  for (const h of HOSTILES) assert.ok(h.inBox >= 1, h.id)
+  assert.equal(HOSTILE_BY_ID['traitor-guardsmen'].inBox, 14)
+})
+check('traitor guardsmen groups of any size get sensible starting loadouts', () => {
+  const cfg = HOSTILE_BY_ID['traitor-guardsmen'].loadouts
+  assert.deepEqual(startingLoadouts(3, cfg), ['Lasgun', 'Lasgun', 'Lasgun'])
+  assert.deepEqual(startingLoadouts(5, cfg), ['Sergeant', 'Flamer', 'Lasgun', 'Lasgun', 'Lasgun'])
+  assert.equal(startingLoadouts(14, cfg).length, 14)
+  let s = encounterReducer(initialEncounter, { type: 'addGroup', hostileId: 'traitor-guardsmen', count: 8, loadouts: cfg })
+  assert.deepEqual(loadoutProblems(s.groups[0].models, cfg), [])
+  assert.equal(s.groups[0].models.filter((m) => m.loadout === 'Sergeant').length, 1)
+})
+check('group make-up problems', () => {
+  const cfg = HOSTILE_BY_ID['traitor-guardsmen'].loadouts
+  const mk = (...l) => l.map((loadout) => ({ loadout }))
+  assert.deepEqual(loadoutProblems(mk('Lasgun', 'Lasgun', 'Flamer'), cfg), [])
+  assert.ok(loadoutProblems(mk('Lasgun', 'Lasgun', 'Lasgun', 'Lasgun', 'Flamer'), cfg).some((p) => p.includes('Sergeant')))
+  assert.ok(loadoutProblems(mk('Sergeant', 'Sergeant', 'Flamer'), cfg).some((p) => p.includes('More than one Sergeant')))
 })
 check('threat level stays within 0..3', () => {
   assert.equal(encounterReducer(initialEncounter, { type: 'threat', value: 7 }).threat, 3)

@@ -21,10 +21,13 @@ No backend. Encounter state, settings and transcribed cards live in `localStorag
 
 ## What it does
 
-- **Encounter**: add hostile groups and log explorer attacks per model: Hit (success,
+- **Encounter**: add hostile groups at whatever size the encounter card shows (up to the
+  number of miniatures in the box), and log explorer attacks per model: Hit (success,
   1 wound) and Crit (critical, 2 wounds; hostiles never take grievous wounds). Tick
   In cover and both drop a step (crit 1 wound, hit misses). Slain is flagged at the
-  Wounds value; stunned/motivated/empowered flags too.
+  Wounds value; stunned/motivated/empowered flags too. Traitor Guardsmen carry a loadout
+  per model (Lasgun, Sergeant, Flamer): groups of 5+ start with the Sergeant and flamer,
+  and the group warns when its make-up breaks the rule.
   **Activate** walks a group through its reinforcement roll, then each standing hostile:
   answer the situation questions and the app picks the leftmost column that applies
   (Designers' Commentary), rolls, and shows the action in plain words with page refs.
