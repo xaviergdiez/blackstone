@@ -419,3 +419,5 @@ mark { background: rgba(164, 107, 214, 0.35); color: inherit; border-radius: 2px
 }
 .btn svg { width: 18px; height: 18px; flex: none; }
 @media (max-width: 899px) { .btable { font-size: 14px; } .btable th, .btable td { padding: 5px 4px; } }
+input.input { width: 100%; min-width: 0; }
+body { overflow-x: clip; }
