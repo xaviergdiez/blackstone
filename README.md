@@ -21,8 +21,10 @@ No backend. Encounter state, settings and transcribed cards live in `localStorag
 
 ## What it does
 
-- **Encounter**: add hostile groups, track wounds and grievous wounds per model (3 damage
-  per grievous, slain flagged automatically), stunned/motivated/empowered flags.
+- **Encounter**: add hostile groups and log explorer attacks per model: Hit (success,
+  1 wound) and Crit (critical, 2 wounds; hostiles never take grievous wounds). Tick
+  In cover and both drop a step (crit 1 wound, hit misses). Slain is flagged at the
+  Wounds value; stunned/motivated/empowered flags too.
   **Activate** walks a group through its reinforcement roll, then each standing hostile:
   answer the situation questions and the app picks the leftmost column that applies
   (Designers' Commentary), rolls, and shows the action in plain words with page refs.
@@ -56,6 +58,9 @@ Things worth knowing before changing data:
   The app follows Games Workshop.
 - Obsidius Mallex's transcription lists Close before In cover. Since the leftmost column
   wins, check it against the card.
+- Attack results live in `src/engine/attack.js`: against hostiles a critical is 2 wounds,
+  against explorers 1 grievous wound; cover drops either one step. Saves from the first
+  version (which logged grievous wounds on hostiles) are migrated at 2 wounds each.
 - The Ambull table has a Protective column whose wording was not transcribed; the app
   asks you to tick it by hand.
 

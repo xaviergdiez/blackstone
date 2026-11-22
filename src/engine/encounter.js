@@ -1,10 +1,22 @@
 // Encounter state: hostile groups on the battlefield and the damage on each model.
 // Pure reducer so the rules can be checked without a browser.
 
-export const GRIEVOUS_DAMAGE = 3
+import { attackOutcome } from './attack.js'
 
+// Hostiles only take wound counters: an explorer's critical success is 2 wounds.
+// `grievous` survives on the model only so that state saved by the first version
+// (which logged grievous wounds on hostiles) still loads; it is folded into wounds.
 export function damageOf(model) {
-  return model.wounds + model.grievous * GRIEVOUS_DAMAGE
+  return model.wounds + (model.grievous || 0) * 2
+}
+
+function migrateModel(m) {
+  if (!m.grievous) return { inCover: false, ...m }
+  return { inCover: false, ...m, wounds: m.wounds + m.grievous * 2, grievous: 0 }
+}
+
+export function migrateEncounter(enc) {
+  return { ...enc, groups: (enc.groups || []).map((g) => ({ ...g, models: g.models.map(migrateModel) })) }
 }
 
 export function isDown(model, woundsValue) {
@@ -15,7 +27,7 @@ let seq = 0
 const uid = (p) => `${p}-${Date.now().toString(36)}-${(seq++).toString(36)}`
 
 export function newModel(label) {
-  return { id: uid('m'), label, wounds: 0, grievous: 0, stunned: false, slain: false, motivated: false, empowered: false }
+  return { id: uid('m'), label, wounds: 0, grievous: 0, stunned: false, slain: false, motivated: false, empowered: false, inCover: false }
 }
 
 export function newGroup(hostileId, count, { name, variant } = {}) {
@@ -72,6 +84,17 @@ export function encounterReducer(state, action) {
         return next
       })
     }
+    case 'attack': {
+      // An explorer's attack roll against a hostile: 'success' or 'crit', with cover applied.
+      const out = attackOutcome(action.result, { target: 'hostile', cover: action.cover })
+      if (!out.wounds) return logged(state, `${action.label || 'Hostile'}: ${action.result} in cover, no effect`)
+      const next = mapModel(state, action.groupId, action.modelId, (m) => {
+        const n = { ...m, wounds: m.wounds + out.wounds, empowered: false }
+        if (action.woundsValue) n.slain = isDown(n, action.woundsValue)
+        return n
+      })
+      return logged(next, `${action.label || 'Hostile'}: ${action.result}${action.cover ? ' (cover)' : ''} → +${out.wounds} wound${out.wounds > 1 ? 's' : ''}`)
+    }
     case 'toggle':
       return mapModel(state, action.groupId, action.modelId, (m) => ({ ...m, [action.flag]: !m[action.flag] }))
     case 'set':
@@ -112,7 +135,7 @@ export function encounterReducer(state, action) {
     case 'endCombat':
       return { ...initialEncounter, menace: state.menace }
     case 'load':
-      return { ...initialEncounter, ...action.state }
+      return migrateEncounter({ ...initialEncounter, ...action.state })
     default:
       return state
   }

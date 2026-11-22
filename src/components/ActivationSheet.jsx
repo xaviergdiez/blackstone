@@ -271,6 +271,9 @@ function Activate({ group, hostile, encounter, settings, dispatch, onClose }) {
                 <div className="kind">{ACTION_KIND_LABEL[r.action.kind] || 'Special'}{r.action.unique ? ' · unique action' : ''}</div>
                 <div className="result-action">{r.action.name}</div>
                 <p>{r.action.text}</p>
+                {r.action.kind.includes('attack') && (
+                  <p className="small muted">Its attack: success = 1 wound, critical = 1 grievous wound. Explorer in cover: critical = 1 wound, success misses{r.action.name === 'Aim' ? ' (Aim ignores cover)' : ''}.</p>
+                )}
                 <Refs refs={r.action.refs} />
               </div>
             ))}

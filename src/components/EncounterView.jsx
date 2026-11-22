@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { EXPANSIONS } from '../data/hostiles.js'
 import { damageOf, groupStats } from '../engine/encounter.js'
 import { inspirationResult } from '../engine/turn.js'
+import { attackOutcome } from '../engine/attack.js'
 import { getHostile, allHostiles } from '../store.js'
 import { ActivationSheet } from './ActivationSheet.jsx'
 import { HostileCard } from './HostileCard.jsx'
@@ -33,7 +34,7 @@ export function EncounterView({ state, dispatch, settings, custom, onTranscribe 
       <div className="page-head">
         <div>
           <h1 className="h1" id="enc-title">Encounter</h1>
-          <p>Track hostile groups, then activate a group when its initiative card comes up. The app walks through reinforcements, picks the column and rolls the behaviour.</p>
+          <p>Log explorer hits with <b>Hit</b> (1 wound) and <b>Crit</b> (2 wounds); tick <b>In cover</b> and both drop a step. Activate a group when its initiative card comes up. <Refs refs={[{ src: 'CB', page: 12 }]} /></p>
         </div>
         <div className="row">
           {groups.length > 0 && <button type="button" className="btn" onClick={() => setInspiring(true)}>Inspiration roll</button>}
@@ -145,29 +146,29 @@ function GroupPanel({ group, hostile, commissarOnField, dispatch, onActivate, on
 function ModelTile({ model, group, hostile, dispatch, canMotivate, pending }) {
   const W = hostile.wounds || 0
   const dmg = damageOf(model)
-  const send = (kind, delta) => dispatch({ type: 'damage', groupId: group.id, modelId: model.id, kind, delta, woundsValue: W })
+  const label = `${hostile.name} #${model.label}`
+  const attack = (result) => dispatch({ type: 'attack', groupId: group.id, modelId: model.id, result, cover: model.inCover, woundsValue: W, label })
+  const heal = () => dispatch({ type: 'damage', groupId: group.id, modelId: model.id, kind: model.wounds > 0 ? 'wounds' : 'grievous', delta: -1, woundsValue: W })
   const toggle = (flag) => dispatch({ type: 'toggle', groupId: group.id, modelId: model.id, flag })
   const pips = []
-  let left = model.grievous * 3
-  for (let i = 0; i < Math.max(W, dmg); i++) {
-    const cls = left > 0 ? 'g' : i < dmg ? 'w' : ''
-    if (left > 0) left--
-    pips.push(<span key={i} className={`pip ${cls}`} />)
-  }
+  for (let i = 0; i < Math.max(W, dmg); i++) pips.push(<span key={i} className={`pip ${i < dmg ? 'w' : ''}`} />)
+  const hit = attackOutcome('success', { cover: model.inCover }).wounds
+  const crit = attackOutcome('crit', { cover: model.inCover }).wounds
   return (
     <div className={`model${model.slain ? ' slain' : ''}${model.stunned ? ' stunned' : ''}`}>
       <div className="model-top">
         <span className="model-label">#{model.label}</span>
-        <span className="mono small" title="damage / wounds">{pending ? `${dmg}` : `${dmg}/${W}`}</span>
+        <span className="mono small" title="wounds taken / Wounds value">{pending ? `${dmg}` : `${dmg}/${W}`}</span>
       </div>
-      {!pending && <div className="pips" aria-label={`${model.wounds} wounds, ${model.grievous} grievous`}>{pips}</div>}
+      {!pending && <div className="pips" aria-label={`${dmg} of ${W} wounds`}>{pips}</div>}
       <div className="model-actions">
-        <button type="button" className="mini w" onClick={() => send('wounds', 1)} aria-label="Add wound">+W</button>
-        <button type="button" className="mini g" onClick={() => send('grievous', 1)} aria-label="Add grievous wound">+G</button>
-        <button type="button" className="mini" onClick={() => (model.grievous > 0 && model.wounds === 0 ? send('grievous', -1) : send('wounds', -1))} aria-label="Remove a wound">−</button>
+        <button type="button" className="mini w" onClick={() => attack('success')} disabled={model.slain} title={`Explorer rolled a success: ${hit ? `+${hit} wound` : 'misses (cover)'}`} aria-label={`Success, ${hit} wound`}>Hit{hit ? ` +${hit}` : ' ✕'}</button>
+        <button type="button" className="mini g" onClick={() => attack('crit')} disabled={model.slain} title={`Explorer rolled a critical: +${crit} wounds`} aria-label={`Critical success, ${crit} wounds`}>Crit +{crit}</button>
+        <button type="button" className="mini" onClick={heal} aria-label="Remove a wound">−</button>
         <button type="button" className="mini" aria-pressed={model.slain} onClick={() => toggle('slain')} aria-label={model.slain ? 'Mark standing' : 'Mark slain'}>{model.slain ? 'Up' : 'Dead'}</button>
       </div>
       <div className="flags">
+        <button type="button" className="mini" aria-pressed={!!model.inCover} onClick={() => toggle('inCover')} style={{ padding: '0 8px' }} title="Cover drops the attack result one step">In cover</button>
         <button type="button" className="mini" aria-pressed={model.stunned} onClick={() => toggle('stunned')} style={{ padding: '0 8px' }}>Stunned</button>
         {canMotivate && <button type="button" className="mini" aria-pressed={model.motivated} onClick={() => toggle('motivated')} style={{ padding: '0 8px' }}>+2 Motiv.</button>}
         {hostile.id === 'rogue-psyker' && <button type="button" className="mini" aria-pressed={model.empowered} onClick={() => toggle('empowered')} style={{ padding: '0 8px' }}>Empowered</button>}

@@ -1,5 +1,5 @@
 import { HOSTILES, withVariant } from './data/hostiles.js'
-import { initialEncounter } from './engine/encounter.js'
+import { initialEncounter, migrateEncounter } from './engine/encounter.js'
 
 const KEY = 'bsf-companion:v1'
 
@@ -34,7 +34,7 @@ export function save(data) {
 export function initialState() {
   const saved = loadSaved() || {}
   return {
-    encounter: { ...initialEncounter, ...(saved.encounter || {}) },
+    encounter: migrateEncounter({ ...initialEncounter, ...(saved.encounter || {}) }),
     settings: { ...DEFAULT_SETTINGS, ...(saved.settings || {}) },
     custom: saved.custom || {},
   }

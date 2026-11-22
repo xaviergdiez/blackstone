@@ -421,3 +421,4 @@ mark { background: rgba(164, 107, 214, 0.35); color: inherit; border-radius: 2px
 @media (max-width: 899px) { .btable { font-size: 14px; } .btable th, .btable td { padding: 5px 4px; } }
 input.input { width: 100%; min-width: 0; }
 body { overflow-x: clip; }
+.mini:disabled { opacity: 0.35; cursor: not-allowed; }

@@ -6,7 +6,8 @@ import { EVENT_TABLES, REINFORCEMENTS } from '../data/tables.js'
 import { bandIndex, pickColumn, resolveBehaviour, modifiedRoll, validateHostile } from './behaviour.js'
 import { reinforcementResult, smallestSize } from './reinforce.js'
 import { destinyFromValues, rollDestiny, dealInitiative, inspirationResult, eventFor } from './turn.js'
-import { encounterReducer, initialEncounter, damageOf } from './encounter.js'
+import { encounterReducer, initialEncounter, damageOf, migrateEncounter } from './encounter.js'
+import { attackOutcome } from './attack.js'
 import { mulberry32 } from './dice.js'
 
 let passed = 0
@@ -143,18 +144,43 @@ check('event lookup', () => {
 })
 
 // --- encounter reducer ------------------------------------------------------
-check('damage marks a model slain at its wounds value, grievous counts 3', () => {
+check('attack results: crit is 2 wounds on a hostile, 1 grievous on an explorer', () => {
+  assert.deepEqual(attackOutcome('success', { target: 'hostile' }), { result: 'success', wounds: 1, grievous: 0 })
+  assert.deepEqual(attackOutcome('crit', { target: 'hostile' }), { result: 'crit', wounds: 2, grievous: 0 })
+  assert.deepEqual(attackOutcome('success', { target: 'explorer' }), { result: 'success', wounds: 1, grievous: 0 })
+  assert.deepEqual(attackOutcome('crit', { target: 'explorer' }), { result: 'crit', wounds: 0, grievous: 1 })
+  assert.equal(attackOutcome('fail', { target: 'hostile' }).wounds, 0)
+})
+check('cover drops one step: crit becomes 1 wound, success misses', () => {
+  assert.deepEqual(attackOutcome('crit', { target: 'hostile', cover: true }), { result: 'success', wounds: 1, grievous: 0 })
+  assert.deepEqual(attackOutcome('crit', { target: 'explorer', cover: true }), { result: 'success', wounds: 1, grievous: 0 })
+  assert.equal(attackOutcome('success', { target: 'hostile', cover: true }).wounds, 0)
+  assert.equal(attackOutcome('success', { target: 'explorer', cover: true }).wounds, 0)
+})
+check('tracker: crits and hits add wounds and mark the model slain at its Wounds value', () => {
   let s = encounterReducer(initialEncounter, { type: 'addGroup', hostileId: 'chaos-space-marines', count: 2 })
   const g = s.groups[0]
   const m = g.models[0]
-  s = encounterReducer(s, { type: 'damage', groupId: g.id, modelId: m.id, kind: 'grievous', delta: 1, woundsValue: 4 })
+  s = encounterReducer(s, { type: 'attack', groupId: g.id, modelId: m.id, result: 'crit', woundsValue: 4 })
+  assert.equal(damageOf(s.groups[0].models[0]), 2)
+  assert.equal(s.groups[0].models[0].grievous, 0)
+  s = encounterReducer(s, { type: 'attack', groupId: g.id, modelId: m.id, result: 'success', cover: true, woundsValue: 4 })
+  assert.equal(damageOf(s.groups[0].models[0]), 2, 'success in cover misses')
+  s = encounterReducer(s, { type: 'attack', groupId: g.id, modelId: m.id, result: 'crit', cover: true, woundsValue: 4 })
   assert.equal(damageOf(s.groups[0].models[0]), 3)
   assert.equal(s.groups[0].models[0].slain, false)
-  s = encounterReducer(s, { type: 'damage', groupId: g.id, modelId: m.id, kind: 'wounds', delta: 1, woundsValue: 4 })
+  s = encounterReducer(s, { type: 'attack', groupId: g.id, modelId: m.id, result: 'success', woundsValue: 4 })
   assert.equal(s.groups[0].models[0].slain, true)
   s = encounterReducer(s, { type: 'returnModels', groupId: g.id, count: 3 })
   assert.equal(s.groups[0].models[0].slain, false)
   assert.equal(damageOf(s.groups[0].models[0]), 0)
+})
+check('old saves: grievous counters on hostiles become 2 wounds each', () => {
+  const old = { groups: [{ id: 'g', hostileId: 'ur-ghuls', models: [{ id: 'm', label: '1', wounds: 1, grievous: 1, slain: false }] }] }
+  const m = migrateEncounter(old).groups[0].models[0]
+  assert.equal(m.wounds, 3)
+  assert.equal(m.grievous, 0)
+  assert.equal(m.inCover, false)
 })
 check('threat level stays within 0..3', () => {
   assert.equal(encounterReducer(initialEncounter, { type: 'threat', value: 7 }).threat, 3)
