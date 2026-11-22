@@ -6,7 +6,7 @@ import { CodexView } from './components/CodexView.jsx'
 import { TurnView } from './components/TurnView.jsx'
 import { RulesView } from './components/RulesView.jsx'
 import { CardEditor } from './components/CardEditor.jsx'
-import { Icon, Sheet, Seg, D20, Toast, useRoller, Refs } from './components/ui.jsx'
+import { Icon, Sheet, Seg, D20, Toast, useRoller, Refs, ConfirmButton } from './components/ui.jsx'
 
 function appReducer(state, action) {
   switch (action.type) {
@@ -132,9 +132,7 @@ export default function App() {
           <p className="small muted" style={{ margin: 0 }}>
             Everything is saved in this browser only: the encounter, settings and any cards you transcribe. This is an unofficial fan tool; Warhammer Quest: Blackstone Fortress and its names belong to Games Workshop.
           </p>
-          <button type="button" className="btn btn-danger" onClick={() => { if (window.confirm('Clear the encounter, settings and your transcribed cards?')) { dispatch({ type: 'resetAll' }); setSettingsOpen(false); setToast('All data cleared') } }}>
-            Reset everything
-          </button>
+          <ConfirmButton className="btn" label="Reset everything" confirmLabel="Tap again: clears encounter, settings and your cards" onConfirm={() => { dispatch({ type: 'resetAll' }); setSettingsOpen(false); setToast('All data cleared') }} />
         </Sheet>
       )}
       {toast && <Toast text={toast} onDone={clearToast} />}

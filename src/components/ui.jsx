@@ -155,3 +155,18 @@ export function Toast({ text, onDone }) {
   }, [text, onDone])
   return <div className="toast" role="status">{text}</div>
 }
+
+// Two-tap confirmation; window.confirm is blocked in sandboxed frames.
+export function ConfirmButton({ className = 'btn', label, confirmLabel = 'Tap again to confirm', onConfirm }) {
+  const [armed, setArmed] = useState(false)
+  useEffect(() => {
+    if (!armed) return undefined
+    const t = window.setTimeout(() => setArmed(false), 3000)
+    return () => window.clearTimeout(t)
+  }, [armed])
+  return (
+    <button type="button" className={`${className}${armed ? ' btn-danger' : ''}`} onClick={() => (armed ? (setArmed(false), onConfirm()) : setArmed(true))}>
+      {armed ? confirmLabel : label}
+    </button>
+  )
+}

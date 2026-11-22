@@ -5,7 +5,7 @@ import { inspirationResult } from '../engine/turn.js'
 import { getHostile, allHostiles } from '../store.js'
 import { ActivationSheet } from './ActivationSheet.jsx'
 import { HostileCard } from './HostileCard.jsx'
-import { Sheet, Stepper, Refs, Icon, StatusBadge, D20, useRoller } from './ui.jsx'
+import { Sheet, Stepper, Refs, Icon, StatusBadge, D20, useRoller, ConfirmButton } from './ui.jsx'
 
 const QUICK = [
   ['traitor-guardsmen', 6], ['negavolt-cultists', 4], ['ur-ghuls', 4], ['spindle-drones', 4],
@@ -37,7 +37,7 @@ export function EncounterView({ state, dispatch, settings, custom, onTranscribe 
         </div>
         <div className="row">
           {groups.length > 0 && <button type="button" className="btn" onClick={() => setInspiring(true)}>Inspiration roll</button>}
-          {groups.length > 0 && <button type="button" className="btn btn-ghost" onClick={() => window.confirm('End the combat and clear all hostile groups?') && dispatch({ type: 'endCombat' })}>End combat</button>}
+          {groups.length > 0 && <ConfirmButton className="btn btn-ghost" label="End combat" confirmLabel="Clear all groups?" onConfirm={() => dispatch({ type: 'endCombat' })} />}
           <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}><Icon name="plus" /> Add group</button>
         </div>
       </div>
