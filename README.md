@@ -13,8 +13,21 @@ tables it reuses (checked cell for cell against that repo's JSON).
 npm install
 npm run dev      # local dev server
 npm test         # self-checks (src/**/*.check.mjs)
-npm run build    # static build in dist/, deployable to Vercel or GitHub Pages as is
+npm run build    # static build in dist/blackstone/
 ```
+
+Live at **mythwired.com/blackstone/**. The build uses an absolute `/blackstone/` base and
+`vercel.json` redirects the domain root there. If another site later takes over the
+root of mythwired.com, add this to that site's `vercel.json` and leave this project as is:
+
+```json
+{ "rewrites": [
+  { "source": "/blackstone", "destination": "https://<this-project>.vercel.app/blackstone/" },
+  { "source": "/blackstone/:path*", "destination": "https://<this-project>.vercel.app/blackstone/:path*" }
+] }
+```
+
+For a build that runs from any folder (e.g. a standalone preview), use `BASE=./ npm run build`.
 
 No backend. Encounter state, settings and transcribed cards live in `localStorage`
 (every access is guarded, so private mode still works from memory).
